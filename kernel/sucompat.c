@@ -121,6 +121,12 @@ int ksu_handle_stat(int *dfd, const char __user **filename_user, int *flags)
 	return 0;
 }
 
+int ksu_handle_execveat(int *fd, struct filename **filename_ptr, void *argv,
+			void *envp, int *flags)
+{
+	return ksu_handle_execveat_sucompat(fd, filename_ptr, argv, envp, flags);
+}
+
 // the call from execve_handler_pre won't provided correct value for __never_use_argument, use them after fix execve_handler_pre, keeping them for consistence for manually patched code
 int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr,
 				 void *__never_use_argv, void *__never_use_envp,
@@ -189,8 +195,15 @@ int ksu_handle_execve_sucompat(int *fd, const char __user **filename_user,
 	return 0;
 }
 
+// dummified
 int ksu_handle_devpts(struct inode *inode)
 {
+	return 0;
+}
+
+int __ksu_handle_devpts(struct inode *inode)
+{
+
 #ifndef CONFIG_KSU_KPROBES_HOOK
 	if (!ksu_sucompat_hook_state)
 		return 0;
@@ -206,15 +219,13 @@ int ksu_handle_devpts(struct inode *inode)
 		return 0;
 	}
 
-	if (!ksu_is_allow_uid(uid))
+	if (likely(!ksu_is_allow_uid(uid)))
 		return 0;
 
-	if (ksu_devpts_sid) {
-		struct inode_security_struct *sec = selinux_inode(inode);
-		if (sec) {
-			sec->sid = ksu_devpts_sid;
-		}
-	}
+	struct inode_security_struct *sec = selinux_inode(inode);
+
+	if (ksu_devpts_sid && sec)
+		sec->sid = ksu_devpts_sid;
 
 	return 0;
 }

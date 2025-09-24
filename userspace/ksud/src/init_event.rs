@@ -70,6 +70,14 @@ pub fn on_post_data_fs() -> Result<()> {
         warn!("apply root profile sepolicy failed: {e}");
     }
 
+    if let Err(e) = kpm::start_kpm_watcher() {
+        warn!("KPM: Failed to start KPM watcher: {}", e);
+    }
+
+    if let Err(e) = kpm::load_kpm_modules() {
+        warn!("KPM: Failed to load KPM modules: {}", e);
+    }
+
     // mount temp dir
     if !Path::new(NO_TMPFS_PATH).exists() {
         if let Err(e) = mount(
@@ -103,11 +111,6 @@ pub fn on_post_data_fs() -> Result<()> {
         }
     } else {
         info!("no mount requested");
-    }
-
-    if kpm::is_kpm_enabled()? {
-        kpm::start_kpm_watcher()?;
-        kpm::load_kpm_modules()?;
     }
 
     run_stage("post-mount", true);
